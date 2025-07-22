@@ -1,0 +1,2 @@
+[ec2]
+{{ANSIBLE_HOST}} ansible_user={{ANSIBLE_USER}} ansible_ssh_private_key_file={{ANSIBLE_SSH_KEY}}
