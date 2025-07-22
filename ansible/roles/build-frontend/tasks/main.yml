@@ -1,0 +1,44 @@
+- name: Clona o repositório do frontend localmente
+  git:
+    repo: "{{ frontend_repo_url }}"
+    dest: "../frontend/repos"
+    version: "{{ frontend_repo_branch }}"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Cria o arquivo .env para o frontend (antes do build)
+  template:
+    src: env.j2
+    dest: "../frontend/repos/frontend/.env"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Build da imagem Docker do frontend
+  command: docker build -t joinchat-frontend -f Dockerfile ./repos/frontend
+  args:
+    chdir: "../frontend"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Roda container temporário e salva ID
+  command: docker create joinchat-frontend
+  register: container_result
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Copia o out do container para o host
+  command: >
+    docker cp {{ container_result.stdout }}:/app/frontend/out ../frontend
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Remove container temporário
+  command: docker rm {{ container_result.stdout }}
+  delegate_to: localhost
+  run_once: true
+  become: false
