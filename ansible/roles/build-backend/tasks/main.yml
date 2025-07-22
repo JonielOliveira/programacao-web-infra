@@ -1,0 +1,44 @@
+- name: Clona o repositório do backend localmente
+  git:
+    repo: "{{ backend_repo_url }}"
+    dest: "../backend/repos"
+    version: "{{ backend_repo_branch }}"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Cria o arquivo .env para o backend (antes do build)
+  template:
+    src: env.j2
+    dest: "../backend/repos/backend/.env"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Build da imagem Docker do backend
+  command: docker build -t joinchat-backend -f Dockerfile ./repos/backend
+  args:
+    chdir: "../backend"
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Roda container temporário e salva ID
+  command: docker create joinchat-backend
+  register: container_result
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Copia o dist do container para o host
+  command: >
+    docker cp {{ container_result.stdout }}:/app/backend/dist ../backend
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Remove container temporário
+  command: docker rm {{ container_result.stdout }}
+  delegate_to: localhost
+  run_once: true
+  become: false
