@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: joinchat-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: joinchat
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: joinchat
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: joinchat-backend
+    depends_on:
+      - db
+    ports:
+      - "3333:3333"
+    environment:
+      DATABASE_URL: postgres://joinchat:secret@db:5432/joinchat
+    command: npm start
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: joinchat-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3333
+    command: npm run dev
+
+volumes:
+  pgdata:
