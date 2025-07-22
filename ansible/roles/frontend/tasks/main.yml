@@ -1,0 +1,66 @@
+# Garante que o diretório principal existe
+- name: Garante que o diretório {{ app_base_dir }} existe
+  file:
+    path: "{{ app_base_dir }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+# Clona o repositório do frontend
+- name: Clona o repositório do frontend
+  git:
+    repo: "{{ frontend_repo_url }}"
+    dest: "{{ app_base_dir }}/frontend"
+    version: "{{ frontend_repo_branch }}"
+    force: yes
+
+# Instala dependências do frontend
+- name: Instala dependências do frontend com npm
+  npm:
+    path: "{{ app_base_dir }}/frontend/frontend"
+    # production: yes
+
+# Cria o arquivo .env do frontend
+- name: Cria o arquivo .env para o frontend
+  template:
+    src: env.j2
+    dest: "{{ app_base_dir }}/frontend/frontend/.env"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+# Compila o projeto (Next.js)
+- name: Compila o projeto Next.js
+  command: npm run build
+  args:
+    chdir: "{{ app_base_dir }}/frontend/frontend"
+  register: build_output
+  failed_when: false
+
+- name: Exibe saída padrão da build
+  debug:
+    var: build_output.stdout_lines
+
+# Exibe erros da build (caso existam)
+- name: Exibe erros da build (caso existam)
+  debug:
+    var: build_output.stderr_lines
+
+# Inicia o frontend com PM2
+- name: Reinicia ou inicia o frontend com PM2 (modo produção)
+  command: pm2 restart joinchat-frontend || pm2 start npm --name joinchat-frontend -- start
+  args:
+    chdir: "{{ app_base_dir }}/frontend/frontend"
+  failed_when: false
+
+# Salva os processos do PM2
+- name: Salva os processos do PM2
+  command: pm2 save
+
+# Configura PM2 para iniciar no boot
+- name: Configura PM2 para iniciar no boot
+  command: pm2 startup systemd --silent
+  register: pm2_startup
+  changed_when: "'[PM2] Init System found: systemd' in pm2_startup.stdout"
+
