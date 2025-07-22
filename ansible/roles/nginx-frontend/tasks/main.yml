@@ -1,0 +1,49 @@
+- name: Cria configuração NGINX para o frontend
+  copy:
+    dest: /etc/nginx/sites-available/{{ nginx_frontend_site_name }}
+    content: |
+      server {
+        listen 80;
+        server_name {{ frontend_domain }};
+        return 301 https://$host$request_uri;
+      }
+
+      server {
+        listen 443 ssl;
+        server_name {{ frontend_domain }};
+
+        ssl_certificate /etc/letsencrypt/live/{{ frontend_domain }}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/{{ frontend_domain }}/privkey.pem;
+
+        root "{{ app_base_dir }}/frontend/frontend/out";
+        index index.html;
+
+        location / {
+          try_files $uri $uri/ /index.html;
+        }
+      }
+
+- name: Ativa site NGINX do frontend
+  file:
+    src: /etc/nginx/sites-available/{{ nginx_frontend_site_name }}
+    dest: /etc/nginx/sites-enabled/{{ nginx_frontend_site_name }}
+    state: link
+    force: yes
+
+- name: Remove default site do NGINX (se existir)
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+    force: yes
+
+- name: Valida configuração do NGINX
+  command: nginx -t
+  register: nginx_test_result
+  changed_when: false
+  failed_when: nginx_test_result.rc != 0
+
+- name: Reinicia o NGINX
+  service:
+    name: nginx
+    state: restarted
+    enabled: true
