@@ -1,0 +1,56 @@
+# Baixa e converte a chave GPG do PostgreSQL
+- name: Baixa e instala a chave GPG do PostgreSQL
+  shell: |
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-archive-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/postgresql-archive-keyring.gpg
+    executable: /bin/bash
+
+# Adiciona o repositório com referência à keyring local (seguro para o apt)
+- name: Adiciona o repositório oficial do PostgreSQL (com assinatura GPG correta)
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+    filename: "pgdg"
+
+- name: Atualiza o cache do APT
+  apt:
+    update_cache: yes
+
+- name: Instala o PostgreSQL
+  apt:
+    name: postgresql
+    state: present
+
+- name: Garante que o PostgreSQL esteja rodando
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Instala dependências do Python para Ansible PostgreSQL
+  apt:
+    name:
+      - python3-psycopg2
+      - python3-pip
+    state: present
+    update_cache: yes
+
+- name: Define a senha do usuário postgres via psql
+  become: true
+  no_log: true
+  shell: |
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '{{ postgres_password }}';"
+
+- name: Cria o banco de dados da aplicação (se não existir)
+  become: true
+  no_log: true
+  shell: |
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '{{ db_name }}'" | grep -q 1 || createdb "{{ db_name }}"
+
+- name: Cria o usuário da aplicação com acesso ao banco (se não existir)
+  become: true
+  no_log: true
+  shell: |
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = '{{ db_user }}'" | grep -q 1 || psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';"
+    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE {{ db_name }} TO {{ db_user }};"
