@@ -15,6 +15,7 @@
       - htop
       - tmux
       - rsync
+      - lsof
     state: present
 
 # Pacotes para compilação e repositórios adicionais
