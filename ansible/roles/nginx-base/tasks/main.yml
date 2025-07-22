@@ -1,0 +1,11 @@
+- name: Instala o NGINX
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Garante que o NGINX está rodando e escutando na porta 80
+  service:
+    name: nginx
+    state: started
+    enabled: true
