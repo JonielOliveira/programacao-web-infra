@@ -1,0 +1,22 @@
+- name: Provisionar servidor Join & Chat
+  hosts: ec2
+  gather_facts: yes # gather_facts: yes é o padrão, apenas deixando explícito
+  become: true
+  become_method: sudo # become_method: sudo é o padrão, apenas deixando explícito
+  strategy: linear # strategy: linear é o padrão, apenas deixando explícito  
+
+  vars_files:
+    - group_vars/ec2.yml
+
+  roles:
+    - { role: common, tags: ["common"] }
+    - { role: database, tags: ["database"] }
+    - { role: node, tags: ["node"] }
+    - { role: backend, tags: ["backend"] }
+    - { role: frontend, tags: ["frontend"] }
+    - { role: nginx-base, tags: ["nginx-base"] }
+    - { role: certbot, tags: ["certbot"] }
+    - { role: nginx-backend, tags: ["nginx-backend"] }
+    - { role: nginx-frontend, tags: ["nginx-frontend"] }
+    - { role: build-backend, tags: ["build-backend"] }
+    - { role: build-frontend, tags: ["build-frontend"] }
