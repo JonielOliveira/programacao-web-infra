@@ -1,0 +1,71 @@
+# Criar diretório, clonar repositório e instalar dependências
+- name: Garante que o diretório {{ app_base_dir }} existe
+  file:
+    path: "{{ app_base_dir }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Clona o repositório do backend
+  git:
+    repo: "{{ backend_repo_url }}"
+    dest: "{{ app_base_dir }}/backend"
+    version: "{{ backend_repo_branch }}"
+    force: yes
+
+- name: Instala dependências com npm
+  npm:
+    path: "{{ app_base_dir }}/backend/backend"
+    # production: yes
+
+# Criar .env baseado no .env.example do repositório do backend
+- name: Cria arquivo .env para o backend
+  template:
+    src: env.j2
+    dest: "{{ app_base_dir }}/backend/backend/.env"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+# Executar os comandos do Prisma
+- name: Roda migrações do Prisma
+  command: npm run prisma:migrate
+  args:
+    chdir: "{{ app_base_dir }}/backend/backend"
+
+- name: Gera cliente Prisma
+  command: npm run prisma:generate
+  args:
+    chdir: "{{ app_base_dir }}/backend/backend"
+
+- name: Executa o seed do Prisma
+  command: npx ts-node prisma/seed.ts
+  args:
+    chdir: "{{ app_base_dir }}/backend/backend"
+
+# Rodar a API com Node.js 
+- name: Compila o projeto TypeScript
+  command: npm run build
+  args:
+    chdir: "{{ app_base_dir }}/backend/backend"
+  register: build_output
+  failed_when: false
+
+- name: Exibe resultado da compilação (mesmo com erro)
+  debug:
+    var: build_output.stderr_lines
+
+- name: Reinicia ou inicia a API com PM2 (modo produção)
+  command: pm2 restart joinchat-backend || pm2 start dist/index.js --name joinchat-backend
+  args:
+    chdir: "{{ app_base_dir }}/backend/backend"
+  failed_when: false
+
+- name: Salva os processos do PM2
+  command: pm2 save
+
+- name: Configura PM2 para iniciar no boot
+  command: pm2 startup systemd --silent
+  register: pm2_startup
+  changed_when: "'[PM2] Init System found: systemd' in pm2_startup.stdout"
