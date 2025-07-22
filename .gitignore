@@ -1,0 +1,45 @@
+# === Terraform ===
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.*
+terraform/crash.*
+terraform/*.tfvars
+terraform/override.tf
+terraform/override.tf.json
+
+# === Ansible ===
+*.retry
+ansible/.vault_pass.txt 
+ansible/inventory
+ansible/host_vars/*.yml
+ansible/group_vars/*.yml
+ansible/*.swp
+ansible/*.bak
+ansible/*~
+
+# === Scripts ===
+*.log
+
+# === Gerais ===
+*.bak
+*.swp
+*.tmp
+.DS_Store
+.env
+.env.*
+
+# === SSH ===
+.ssh/
+*.pem
+*.pub
+
+# === Repositórios ===
+/backend/repos/
+/backend/dist/
+/backend/out/
+/frontend/repos/
+/frontend/dist/
+/frontend/out/
+
+# Permissões explícitas:
+!scripts/.env.example
